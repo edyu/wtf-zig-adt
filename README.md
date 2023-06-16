@@ -1,4 +1,4 @@
-# Zig Union(Enum) – WTF is switch(union(enum))
+# Zig Union(Enum) - WTF is switch(union(enum))
 
 The power and complexity of **Union(Enum)** in Zig
 
@@ -217,6 +217,25 @@ As we mentioned earlier, the individual fields of an _enum_ are called tags.
 Tagged _union_ was created so that they can be used in _switch_ expressions.
 
 ```zig
+// first define the tags
+const ValueType = enum {
+    int,
+    float,
+    string,
+    unknown,
+};
+
+// not too different from simple union
+const Value = union(ValueType) {
+    int: i32,
+    float: f64,
+    string: []const u8,
+    unknown: void,
+};
+
+// just like the simple union
+var value = Value{ .float = 42.21 };
+
 switch (value) {
     .int => std.debug.print("value is int={d}\n", .{value.int}),
     .float => std.debug.print("value is float={d}\n", .{value.float}),
@@ -278,6 +297,11 @@ const Node = struct {
     right: *const Tree,
 };
 
+const Tree = union(NodeType) {
+    tip: Tip,
+    node: *const Node,
+}
+
 const leaf = Tip{};
 
 // this is meant to reimplement the binary tree example on https://wiki.haskell.org/Algebraic_data_type
@@ -313,7 +337,7 @@ Instead of `else`, you can use `_` to ensure you handled all the cases in the
 _switch_ expression.
 
 ```zig
-const Eds = enum {
+const Eds = enum(u8) {
     Ed,
     Edward,
     Edmond,
@@ -350,6 +374,9 @@ switch (not_ed) {
     _ => std.debug.print("us\n", .{}),
 }
 ```
+
+Btw, you can add functions to _enum_, _union_, _union(enum)_ just like you can in _struct_.
+You can see examples of that in the code below.
 
 ## The End
 
