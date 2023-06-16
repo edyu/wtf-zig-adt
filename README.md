@@ -1,4 +1,4 @@
-# Zig Union(Enum) – WTF is ADT
+# Zig Union(Enum) – WTF is switch(union(enum))
 
 The power and complexity of **Union(Enum)** in Zig
 
@@ -35,8 +35,17 @@ One of the most widely used features and the underlying foundation of the
 (not to be confused with [_Abstract Data Types_](https://wiki.haskell.org/Abstract_data_type)).
 You can look up the difference on [StackOverflow](https://stackoverflow.com/questions/42833270/what-is-the-difference-between-abstract-data-types-and-algebraic-data-types).
 
-However, for us programmers, you can just think of _ADT_ as either a _struct_
-or a simple _class_ (simple as in not nested).
+However, for us programmers, you can just think of _Abstract Data Types_ as
+either a _struct_ or a simple _class_ (simple as in not nested).
+
+For _ADT_ or _Algebraic Data Types_, we need to have access to _union_ for
+those that has experienced it before in languages that provide such construct
+such as **C** or in our case **Zig**.
+
+**Note**: In order for _ADT_ to be called _Algebraic_, it needs to support both
+_sum_ and _product_.
+_Sum_ means that the type needs to support A or B but not both together,
+whereas _product_ means the type needs to support A and B together.
 
 ## Why do we care?
 
@@ -56,8 +65,11 @@ concepts first.
 
 ## Zig Struct
 
-**Zig** also has the idea of _struct_. In fact, it's pretty much everywhere
-in **Zig**.
+The foundation of data types in **Zig** is the _struct_.
+In fact, it's pretty much everywhere in **Zig**.
+
+The _struct_ in **Zig** is probably the closest thing to a _class_ in most
+object-oriented programming languages.
 
 Here is the basic idea:
 
@@ -66,15 +78,15 @@ Here is the basic idea:
 const std = @import("std");
 
 // let's construct a binary tree node
-const Node = struct {
-    // a binary tree has a left sub-tree and a right sub-tree
-    left: ?*Node,
-    // for simplicity, let's just say we have an unsigned 32bit integer value
+const BinaryTree = struct {
+    // a binary tree has a left subtree and a right subtree
+    left: ?*BinaryTree,
+    // for simplicity, let's just say we have an unsigned 32-bit integer value
     value: u32,
-    right: ?*Node,
+    right: ?*BinaryTree,
 };
 
-const tree = Node{ .left = null, .value = 42, .right = null };
+const tree = BinaryTree{ .left = null, .value = 42, .right = null };
 ```
 
 There are several things of note here in the code above:
@@ -83,30 +95,30 @@ There are several things of note here in the code above:
    It basically means that the variable can either have a value of the type after
    `?` or if it doesn't then it will take on a value of `null`.
 
-2. We are referring to the _Node_ type inside the _Node_ type definition as
+2. We are referring to the _BinaryTree_ type inside the _BinaryTree_ type definition as
    a tree is a recursive structure.
 
 3. However, you must use the `*` to denote that _left_ and _right_ are
-   pointers to another _Node_ struct. If you leave out the pointer then the
-   compiler will complain because then the size of _Node_ is dynamic as it can
+   pointers to another _BinaryTree_ struct. If you leave out the pointer then the
+   compiler will complain because then the size of _BinaryTree_ is dynamic as it can
    grow to be arbitrarily big as we add more sub-trees.
 
 The following code will show a slightly more complex tree structure.
-Note that we have to use `&` in order to get the pointer of the _Node_ struct.
+Note that we have to use `&` in order to get the pointer of the _BinaryTree_ struct.
 
 ```zig
-    var left = Node{ .left = null, .value = 21, .right = null };
-    var far_right = Node{ .left = null, .value = 168, .right = null };
-    var right = Node{ .left = null, .value = 84, .right = &far_right };
+    var left = BinaryTree{ .left = null, .value = 21, .right = null };
+    var far_right = BinaryTree{ .left = null, .value = 168, .right = null };
+    var right = BinaryTree{ .left = null, .value = 84, .right = &far_right };
 
-    const tree2 = Node{ .left = &left, .value = 42, .right = &right };
+    const tree2 = BinaryTree{ .left = &left, .value = 42, .right = &right };
 ```
 
 ## Zig Enum
 
 Sometimes, a _struct_ is an overkill if you just want to have a set of possible
 values for a variable to take and restrict the variable to take only a value
-from the set. Usually, we would use _enum_ for such use case.
+from the set. Usually, we would use _enum_ for such a use case.
 
 ```zig
 // sorry if I left our your favorite pet
@@ -128,7 +140,7 @@ std.debug.print("There are {d}{d} types of people in this world, those understan
 
 ## Switch on Enum
 
-One of the most convenient construct for an _enum_ is the _switch_ expression.
+One of the most convenient constructs for an _enum_ is the _switch_ expression.
 In **Haskell**, the reason _ADT_ is so useful is the ability to pattern match
 on the _switch_ expression. In fact, **Haskell**, function definition is
 basically a super-charged switch statement.
@@ -199,10 +211,10 @@ switch (value) {
 The error message on the previous example will actual say:
 `note: consider 'union(enum)' here`.
 
-The **Zig** nomenclature for `union(enum)` is actually called tagged union.
-As we mentioned earlier that the individual fields of an _enum_ is called tags.
+The **Zig** nomenclature for `union(enum)` is actually called tagged _union_.
+As we mentioned earlier, the individual fields of an _enum_ are called tags.
 
-Tagged union was created so that they can be used in _switch_ expressions.
+Tagged _union_ was created so that they can be used in _switch_ expressions.
 
 ```zig
 switch (value) {
@@ -241,6 +253,55 @@ switch (value) {
 }
 ```
 
+## Tagged Union as ADT
+
+We now have everything we need to implement **Zig** version of _ADT_.
+What makes _ADT_ useful is that not only it will tell you the state but also
+the context of the state.
+
+Using **Zig** for instance, the active tag in a `union` will tell you the state,
+and if the _tag_ is a type that has a value, then the value is the context.
+
+```zig
+// this example is fairly involved, please see the full code on github
+// You can find the code at https://github.com/edyu/wtf-zig-adt/blob/master/testadt.zig
+const NodeType = enum {
+    tip,
+    node,
+};
+
+const Tip = struct {};
+
+const Node = struct {
+    left: *const Tree,
+    value: u32,
+    right: *const Tree,
+};
+
+const leaf = Tip{};
+
+// this is meant to reimplement the binary tree example on https://wiki.haskell.org/Algebraic_data_type
+// if you call tree.toString(), it will print out:
+// Node (Node (Node (Tip 1 Tip) 3 Node (Tip 4 Tip)) 5 Node (Tip 7 Tip))
+const tree = Tree{ .node = &Node{
+    .left = &Tree{ .node = &Node{
+        .left = &Tree{ .node = &Node{
+            .left = &Tree{ .tip = leaf },
+            .value = 1,
+            .right = &Tree{ .tip = leaf } } },
+        .value = 3,
+        .right = &Tree{ .node = &Node{
+            .left = &Tree{ .tip = leaf },
+            .value = 4,
+            .right = &Tree{ .tip = leaf } } } } },
+    .value = 5,
+    .right = &Tree{ .node = &Node{
+        .left = &Tree{ .tip = leaf },
+        .value = 7,
+        .right = &Tree{ .tip = leaf } } } } };
+// see the full example on github
+```
+
 ## Bonus
 
 In **Zig**, there is also something called _non-exhaustive enum_.
@@ -267,7 +328,7 @@ const ed = Eds.Ed;
 
 std.debug.print("All your code are belong to ", .{});
 switch (ed) {
-    // Zig switch uses , not | for mutiple options
+    // Zig switch uses , not | for multiple options
     .Ed, .Edward => std.debug.print("{s}!\n", .{@tagName(ed)}),
     // can use capture
     .Edmond, .Eduardo, .Edwin, .Eddy, .Eddie => |name| std.debug.print("this {s}!\n", .{@tagName(name)}),
