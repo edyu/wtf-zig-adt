@@ -35,7 +35,7 @@ test "basic enum" {
 
     const Binary = enum(u1) { Zero = 0, One = 1 };
 
-    std.debug.print("There are {d}{d} types of people in this world, those understand binary and those who don't.\n", .{ @enumToInt(Binary.One), @enumToInt(Binary.Zero) });
+    std.debug.print("There are {d}{d} types of people in this world, those understand binary and those who don't.\n", .{ @intFromEnum(Binary.One), @intFromEnum(Binary.Zero) });
 
     // all my subjectively objective opinions are mine alone
     // any similiarity to your opinion is purely coincidental
@@ -85,7 +85,7 @@ test "non-exhaustive enum" {
     }
 
     // obviously no such enum predefined
-    const not_ed = @intToEnum(Eds, 241);
+    const not_ed = @as(Eds, @enumFromInt(241));
     std.debug.print("All your base are belong to ", .{});
     switch (not_ed) {
         .Ed, .Edward => std.debug.print("{s}!\n", .{@tagName(ed)}),
